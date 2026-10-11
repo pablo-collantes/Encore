@@ -1,0 +1,6 @@
+{
+  // Unit tests run in Node (vitest), against the Worker code and Node's built-in SQLite.
+  "extends": "./tsconfig.worker.json",
+  "compilerOptions": { "types": ["@cloudflare/workers-types", "node"] },
+  "include": ["src/worker/**/*.ts", "src/shared/**/*.ts", "test/**/*.ts"]
+}

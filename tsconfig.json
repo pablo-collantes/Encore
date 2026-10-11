@@ -1,0 +1,11 @@
+{
+  // Two programs: the Worker (workers runtime types, no DOM) and the web app
+  // (DOM + JSX). `npm run typecheck` checks both. The paths below mirror
+  // tsconfig.web.json for tools (shadcn CLI, editors) that only read this file.
+  "files": [],
+  "references": [{ "path": "./tsconfig.worker.json" }, { "path": "./tsconfig.web.json" }, { "path": "./tsconfig.test.json" }],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/web/*"], "@shared/*": ["./src/shared/*"] }
+  }
+}

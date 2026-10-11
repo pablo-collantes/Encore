@@ -1,0 +1,116 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "encore",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Served only from the custom domain. `custom_domain: true` makes wrangler
+  // create the proxied DNS record, route and edge cert on deploy (the zone must
+  // be in your account). workers_dev / preview_urls are off so there is no
+  // second *.workers.dev front door — the OAuth redirect URI names this host anyway.
+  "routes": [
+    { "pattern": "encore.example.com", "custom_domain": true }
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+
+  // The dashboard (built by `vite build` via @cloudflare/vite-plugin, which fills
+  // in the directory) is served from the edge without running the Worker, except
+  // on the paths below, where the Worker runs first:
+  //   /api/* /auth/* /health   the Hono app
+  //   /protected/*             the signed-in app bundle; 404 without a session,
+  //                            so anonymous visitors can't even read the app code
+  // Everything else falls back to index.html, which holds only the sign-in page
+  // (that includes /admin: it's the app's People page, not a Worker route).
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/auth/*", "/health", "/protected/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "encore",
+      "database_id": "<your-d1-database-id>", // npx wrangler d1 create encore
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Dashboard answers stored between data changes (src/worker/lib/cache.ts).
+  // Keys start with a build-time hash of the server code (vite.config.ts), so a
+  // deploy that changes the Worker starts clean and a frontend-only one doesn't;
+  // version_metadata is the fallback when that hash is absent (e.g. unit tests).
+  "kv_namespaces": [{ "binding": "CACHE", "id": "<your-kv-namespace-id>" }],
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+
+  // Run fetch handlers next to the D1 primary (set the region nearest yours).
+  // Cron handlers run in whichever data centre has room, worldwide, and Deezer
+  // refuses many of them ("Access Denied") while answering from a placed region;
+  // so the minute cron calls the enrichment pump back through SELF, which goes
+  // through the fetch handler and therefore lands here. Placement never applies
+  // to crons.
+  "placement": { "region": "gcp:us-south1" },
+  "services": [{ "binding": "SELF", "service": "encore" }],
+
+  // Invite and password-reset emails (Cloudflare Email Sending; the sending
+  // domain must be onboarded, and the binding needs no token). The allow-list
+  // means a bug can't send as another app's address.
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["encore@example.com"] }],
+
+  // All three crons hit the same `scheduled()` handler, which routes on
+  // controller.cron. See README "Polling and D1 writes" before adding a fourth.
+  "triggers": {
+    "crons": [
+      "* * * * *", // playback sampler (+ one step of the metadata/genre/audio-feature pump)
+      "*/5 * * * *", // recently-played: authoritative completed-play log
+      "17 * * * *" // maintenance: Spotify top lists, cleanup/merge passes, log pruning
+    ]
+  },
+
+  // Native rate limiting (edge counters, no storage), keyed by client IP.
+  //   RL_AUTH  brute-force guard on /api/auth/{login,logout,set-password,forgot-password,
+  //            reset-password} and the Spotify connect flow (/auth/spotify, /auth/login)
+  //   RL_API   flood guard on /api/* (an import of a large export is ~100 requests)
+  // namespace_id must be unique per limiter across the account.
+  "ratelimits": [
+    { "name": "RL_AUTH", "namespace_id": "6001", "simple": { "limit": 8, "period": 60 } },
+    { "name": "RL_API", "namespace_id": "6002", "simple": { "limit": 900, "period": 60 } }
+  ],
+
+  "vars": {
+    // Non-secret config. Secrets go in `wrangler secret put` / .dev.vars.
+    "ENVIRONMENT": "production",
+    // Must exactly match a Redirect URI registered on your Spotify app.
+    "SPOTIFY_REDIRECT_URI": "https://encore.example.com/auth/callback",
+    // Retention for the api_calls diagnostic log (0 = keep forever).
+    "API_LOG_RETENTION_DAYS": "30",
+    // The time zone the stored All time / yearly totals use for days, years and
+    // hours (src/worker/stats/rollup.ts). The dashboard in any other zone falls
+    // back to reading the listens directly. Changing it rebuilds the totals once.
+    "STATS_TZ": "UTC",
+    // Account emails: From address (must be on the onboarded sending domain),
+    // display name, and the fallback base for links (normally the request origin).
+    "EMAIL_FROM": "encore@example.com",
+    "APP_NAME": "Encore",
+    "APP_URL": "https://encore.example.com"
+  },
+
+  // `wrangler dev` / `vite dev` only: keep request.url on the local host so
+  // redirects built from the request origin don't point at production.
+  "dev": {
+    "ip": "127.0.0.1",
+    "port": 8787,
+    "local_protocol": "http",
+    "upstream_protocol": "http",
+    "host": "127.0.0.1:8787"
+  },
+
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "invocation_logs": false // the 1-minute cron would otherwise dominate your logs
+    }
+  }
+}

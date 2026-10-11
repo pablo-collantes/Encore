@@ -1,0 +1,23 @@
+# Copy to `.dev.vars` for local development (`wrangler dev`).
+# In production these are set as encrypted secrets instead:
+#   npx wrangler secret put SPOTIFY_CLIENT_ID
+#   npx wrangler secret put SPOTIFY_CLIENT_SECRET
+#   npx wrangler secret put API_KEY
+#   npx wrangler secret put STATE_SECRET
+
+# From https://developer.spotify.com/dashboard -> your app -> Settings
+SPOTIFY_CLIENT_ID=
+SPOTIFY_CLIENT_SECRET=
+
+# Bearer token you invent. Gates every /api and /admin route.
+#   openssl rand -hex 32
+API_KEY=
+
+# Independent random secret used to sign the OAuth `state` parameter.
+#   openssl rand -hex 32
+STATE_SECRET=
+
+# Local redirect URI. Must ALSO be registered on the Spotify app.
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:8787/auth/callback
+ENVIRONMENT=development
+API_LOG_RETENTION_DAYS=30
