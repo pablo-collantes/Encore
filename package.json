@@ -1,6 +1,7 @@
 {
   "name": "encore",
   "version": "0.2.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "description": "Full-stack TypeScript on Cloudflare Workers, D1 and KV with a React PWA",

@@ -6,6 +6,7 @@
 ![Hono](https://img.shields.io/badge/Hono-4-E36002?logo=hono&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 Encore is a self-hosted Spotify listening archive and dashboard. It is a
 full-stack TypeScript app that runs entirely on Cloudflare's edge: a single
@@ -205,3 +206,9 @@ Apply schema changes as new numbered files in `migrations/`, and run
 | `npm run typecheck` | Type-check every TypeScript project |
 | `npm run db:migrate` / `db:migrate:local` | Apply D1 migrations remotely or locally |
 | `npm run tail` | Stream production logs |
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE).
